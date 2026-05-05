@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. Primitive Definitions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // 2. Validation Blueprints
+    function isValidVoter(data) {
+      return data.fullName is string && data.fullName.size() <= 200 &&
+             data.precinctId is string && data.precinctId.size() <= 128 &&
+             data.precinctName is string && data.precinctName.size() <= 200 &&
+             data.barangay is string && data.barangay.size() <= 200 &&
+             data.cluster is string && data.cluster.size() <= 100 &&
+             data.affiliationColor in ['Red', 'Blue', 'Neutral', 'Other'] &&
+             data.address is string && data.address.size() <= 600 &&
+             (!data.keys().hasAll(['contactNumber']) || (data.contactNumber is string && data.contactNumber.size() <= 20)) &&
+             data.keys().hasAll(['fullName', 'precinctId', 'affiliationColor', 'address', 'createdAt', 'barangay', 'cluster']);
+    }
+
+    function isValidPrecinct(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.barangay is string && data.barangay.size() <= 200 &&
+             data.cluster is string && data.cluster.size() <= 100 &&
+             data.location_details is string && data.location_details.size() <= 600 &&
+             data.total_voters is int &&
+             data.imageUrl is string && data.imageUrl.size() <= 1000 &&
+             data.keys().hasAll(['name', 'location_details', 'total_voters', 'imageUrl', 'createdAt', 'barangay', 'cluster']);
+    }
+
+    // 3. Collection Rules
+    match /voters/{voterId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidVoter(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /precincts/{precinctId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidPrecinct(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Voter": {
+      "title": "Voter",
+      "description": "Information about a registered voter",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "description": "Full name of the voter" },
+        "precinctId": { "type": "string", "description": "ID of the precinct they belong to" },
+        "precinctName": { "type": "string", "description": "Display name of the precinct" },
+        "barangay": { "type": "string", "description": "Barangay name" },
+        "cluster": { "type": "string", "description": "Cluster name" },
+        "affiliationColor": { "type": "string", "description": "Political party color", "enum": ["Red", "Blue", "Neutral", "Other"] },
+        "address": { "type": "string", "description": "Residential address" },
+        "contactNumber": { "type": "string", "description": "Phone number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "precinctId", "affiliationColor", "address"]
+    },
+    "Precinct": {
+      "title": "Precinct",
+      "description": "A voting area or jurisdiction",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Descriptive name of the precinct" },
+        "barangay": { "type": "string", "description": "Barangay belonging" },
+        "cluster": { "type": "string", "description": "Cluster belonging" },
+        "location_details": { "type": "string", "description": "Physical location details" },
+        "total_voters": { "type": "integer", "description": "Total count of voters in this precinct" },
+        "imageUrl": { "type": "string", "description": "Link to the precinct image" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "barangay", "cluster", "location_details"]
+    }
+  },
+  "firestore": {
+    "/voters/{voterId}": {
+      "schema": "Voter",
+      "description": "Collection of voter records"
+    },
+    "/precincts/{precinctId}": {
+      "schema": "Precinct",
+      "description": "Collection of precinct management data"
+    }
+  }
+}
