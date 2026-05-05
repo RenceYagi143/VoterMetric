@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -32,10 +32,27 @@ export default function Dashboard() {
   const [seeding, setSeeding] = useState(false);
 
   const { voters, loading: votersLoading } = useVoters({ 
-    precinctId: precinctFilter, 
-    search: searchQuery,
-    category: searchCategory
+    precinctId: precinctFilter
   });
+
+  const filteredVoters = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
+    if (!searchLower) return voters;
+    
+    return voters.filter(v => {
+      const nameMatch = v.fullName.toLowerCase().includes(searchLower);
+      const addressMatch = v.address.toLowerCase().includes(searchLower);
+      const precinctMatch = v.precinctName.toLowerCase().includes(searchLower);
+      const affiliationMatch = v.affiliationColor.toLowerCase().includes(searchLower);
+
+      if (searchCategory === 'Name') return nameMatch;
+      if (searchCategory === 'Address') return addressMatch;
+      if (searchCategory === 'Precinct') return precinctMatch;
+      if (searchCategory === 'Political Affiliation') return affiliationMatch;
+      
+      return nameMatch || addressMatch || precinctMatch || affiliationMatch;
+    });
+  }, [voters, searchQuery, searchCategory]);
   
   const { precincts } = usePrecincts();
 
@@ -167,7 +184,7 @@ export default function Dashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <Analytics voters={voters} precincts={precincts} />
+                    <Analytics voters={filteredVoters} precincts={precincts} />
                   </motion.div>
                 )}
 
@@ -180,7 +197,7 @@ export default function Dashboard() {
                   >
                     <PrecinctManager 
                       precincts={precincts} 
-                      voters={voters} 
+                      voters={filteredVoters} 
                       onEditVoter={(voter) => setEditingVoter(voter)}
                     />
                   </motion.div>
@@ -194,7 +211,7 @@ export default function Dashboard() {
                     exit={{ opacity: 0, y: -10 }}
                   >
                     <VoterTable 
-                      voters={voters} 
+                      voters={filteredVoters} 
                       loading={votersLoading} 
                       precincts={precincts}
                       masterView

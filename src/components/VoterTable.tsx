@@ -57,14 +57,23 @@ export default function VoterTable({ voters, loading, precincts, masterView, onE
 
   const exportToCSV = () => {
     const headers = ['Full Name', 'Cluster', 'Barangay', 'Precinct', 'Affiliation', 'Address', 'Contact Number'];
+    
+    const sanitize = (val: any) => {
+      let str = String(val || '').replace(/"/g, '""');
+      if (/^[=\-@+]/.test(str)) {
+        str = "'" + str; 
+      }
+      return `"${str}"`;
+    };
+
     const rows = sortedVoters.map(v => [
-      v.fullName,
-      v.cluster || '',
-      v.barangay || '',
-      v.precinctName,
-      v.affiliationColor,
-      `"${v.address}"`,
-      v.contactNumber || ''
+      sanitize(v.fullName),
+      sanitize(v.cluster),
+      sanitize(v.barangay),
+      sanitize(v.precinctName),
+      sanitize(v.affiliationColor),
+      sanitize(v.address),
+      sanitize(v.contactNumber)
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);

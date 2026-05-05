@@ -11,6 +11,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    function isClerk() {
+      return isSignedIn() && request.auth.token.role == 'clerk';
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -44,15 +52,17 @@ service cloud.firestore {
 
     // 3. Collection Rules
     match /voters/{voterId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidVoter(incoming());
-      allow delete: if isSignedIn();
+      allow get: if isAdmin() || isClerk();
+      allow list: if (isAdmin() || isClerk()) && request.query.limit <= 250;
+      allow create, update: if (isAdmin() || isClerk()) && isValidVoter(incoming());
+      allow delete: if isAdmin();
     }
 
     match /precincts/{precinctId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidPrecinct(incoming());
-      allow delete: if isSignedIn();
+      allow get: if isAdmin() || isClerk();
+      allow list: if (isAdmin() || isClerk()) && request.query.limit <= 250;
+      allow create, update: if (isAdmin() || isClerk()) && isValidPrecinct(incoming());
+      allow delete: if isAdmin();
     }
   }
 }

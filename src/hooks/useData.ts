@@ -1,43 +1,23 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Voter, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/error-handler';
 
-export function useVoters(filters: { precinctId?: string, search?: string, category?: string }) {
+export function useVoters(filters: { precinctId?: string, limit?: number }) {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let q = query(collection(db, 'voters'), orderBy('fullName', 'asc'));
+    let q = query(collection(db, 'voters'), orderBy('fullName', 'asc'), limit(filters.limit || 250));
 
     if (filters.precinctId && filters.precinctId !== 'all') {
-      q = query(collection(db, 'voters'), where('precinctId', '==', filters.precinctId), orderBy('fullName', 'asc'));
+      q = query(collection(db, 'voters'), where('precinctId', '==', filters.precinctId), orderBy('fullName', 'asc'), limit(filters.limit || 250));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Voter));
-      
-      const searchLower = filters.search?.toLowerCase() || '';
-      const category = filters.category || 'All';
-
-      const filteredData = searchLower 
-        ? data.filter(v => {
-            const nameMatch = v.fullName.toLowerCase().includes(searchLower);
-            const addressMatch = v.address.toLowerCase().includes(searchLower);
-            const precinctMatch = v.precinctName.toLowerCase().includes(searchLower);
-            const affiliationMatch = v.affiliationColor.toLowerCase().includes(searchLower);
-
-            if (category === 'Name') return nameMatch;
-            if (category === 'Address') return addressMatch;
-            if (category === 'Precinct') return precinctMatch;
-            if (category === 'Political Affiliation') return affiliationMatch;
-            
-            return nameMatch || addressMatch || precinctMatch || affiliationMatch;
-          })
-        : data;
-        
-      setVoters(filteredData);
+      setVoters(data);
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'voters');
@@ -45,7 +25,7 @@ export function useVoters(filters: { precinctId?: string, search?: string, categ
     });
 
     return () => unsubscribe();
-  }, [filters.precinctId, filters.search, filters.category]);
+  }, [filters.precinctId]);
 
   return { voters, loading };
 }
