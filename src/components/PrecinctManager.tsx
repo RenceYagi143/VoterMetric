@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Precinct, OperationType, Voter } from '../types';
-import { MapPin, Plus, Trash2, Edit2, Info, Users, BarChart3, Activity, Mail, Phone, Calendar } from 'lucide-react';
+import { MapPin, Plus, Trash2, Edit2, Users, BarChart3, Activity, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { addDoc, deleteDoc, doc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, doc, collection, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { getAffiliationStyles } from '../lib/utils';
 import { db } from '../lib/firebase';
 import { handleFirestoreError } from '../lib/error-handler';
 
@@ -25,6 +26,11 @@ export default function PrecinctManager({ precincts, voters, onEditVoter }: Prop
   const [imageUrl, setImageUrl] = useState('');
   const [clusterInput, setClusterInput] = useState('');
   const [barangayInput, setBarangayInput] = useState('');
+
+  const selectedPrecinctVoters = React.useMemo(() => {
+    if (!selectedPrecinct) return [];
+    return voters.filter(v => v.precinctId === selectedPrecinct.id);
+  }, [voters, selectedPrecinct]);
 
   const clusters = Array.from(new Set(precincts.map(p => p.cluster))).filter(Boolean);
   const barangays = Array.from(new Set(precincts.filter(p => !selectedCluster || p.cluster === selectedCluster).map(p => p.barangay))).filter(Boolean);
@@ -57,7 +63,16 @@ export default function PrecinctManager({ precincts, voters, onEditVoter }: Prop
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Confirm decommissioning of Sector ${name}? This will remove all registry links.`)) return;
     try {
-      await deleteDoc(doc(db, 'precincts', id));
+      const batch = writeBatch(db);
+      
+      batch.delete(doc(db, 'precincts', id));
+      
+      const votersToDelete = voters.filter(v => v.precinctId === id);
+      votersToDelete.forEach(v => {
+        batch.delete(doc(db, 'voters', v.id));
+      });
+      
+      await batch.commit();
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `precincts/${id}`);
     }
@@ -286,19 +301,15 @@ export default function PrecinctManager({ precincts, voters, onEditVoter }: Prop
                   <div className="flex items-center justify-between border-b border-gov-navy/10 pb-4">
                     <h3 className="text-xl font-serif font-bold text-gov-navy">Registered Entities</h3>
                     <span className="text-[10px] font-black uppercase tracking-widest text-gov-gold bg-gov-navy px-3 py-1 rounded-full">
-                      Total: {voters.filter(v => v.precinctId === selectedPrecinct.id).length}
+                      Total: {selectedPrecinctVoters.length}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4">
-                    {voters.filter(v => v.precinctId === selectedPrecinct.id).map((voter) => (
+                    {selectedPrecinctVoters.map((voter) => (
                       <div key={voter.id} className="p-4 rounded-xl bg-gov-bg border border-gov-navy/5 flex items-center justify-between hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-4">
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${
-                            voter.affiliationColor === 'Red' ? 'bg-red-600' :
-                            voter.affiliationColor === 'Blue' ? 'bg-blue-600' :
-                            voter.affiliationColor === 'Neutral' ? 'bg-gray-400' : 'bg-purple-600'
-                          }`}>
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold border border-transparent shadow-sm ${getAffiliationStyles(voter.affiliationColor)}`}>
                             {voter.fullName.charAt(0)}
                           </div>
                           <div>
@@ -319,11 +330,7 @@ export default function PrecinctManager({ precincts, voters, onEditVoter }: Prop
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-right">
-                            <p className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
-                              voter.affiliationColor === 'Red' ? 'text-red-600 border-red-200 bg-red-50' :
-                              voter.affiliationColor === 'Blue' ? 'text-blue-600 border-blue-200 bg-blue-50' :
-                              voter.affiliationColor === 'Neutral' ? 'text-gray-600 border-gray-200 bg-gray-50' : 'text-purple-600 border-purple-200 bg-purple-50'
-                            }`}>
+                            <p className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border border-transparent shadow-sm ${getAffiliationStyles(voter.affiliationColor)}`}>
                               {voter.affiliationColor}
                             </p>
                           </div>
@@ -337,7 +344,7 @@ export default function PrecinctManager({ precincts, voters, onEditVoter }: Prop
                         </div>
                       </div>
                     ))}
-                    {voters.filter(v => v.precinctId === selectedPrecinct.id).length === 0 && (
+                    {selectedPrecinctVoters.length === 0 && (
                       <div className="p-8 bg-gov-bg rounded-2xl border border-dashed border-gov-navy/10 flex flex-col items-center justify-center text-center">
                         <Users size={32} className="text-gov-navy/10 mb-2" />
                         <p className="text-sm font-medium text-gov-navy/40 italic">No registered voters found in this sector.</p>

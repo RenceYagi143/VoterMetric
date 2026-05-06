@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Voter, Affiliation } from '../types';
 import { ChevronUp, ChevronDown, MoreHorizontal, Phone, Home, Users, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getAffiliationStyles } from '../lib/utils';
 
 interface Props {
   voters: Voter[];
@@ -84,15 +85,7 @@ export default function VoterTable({ voters, loading, precincts, masterView, onE
     link.click();
   };
 
-  const getBadgeColor = (aff: Affiliation) => {
-    switch (aff) {
-      case 'Red': return 'bg-red-600 text-white border-red-700';
-      case 'Blue': return 'bg-blue-600 text-white border-blue-700';
-      case 'Neutral': return 'bg-gray-400 text-white border-gray-500';
-      case 'Other': return 'bg-purple-600 text-white border-purple-700';
-      default: return 'bg-gov-gold text-gov-navy border-yellow-600';
-    }
-  };
+  const getBadgeColor = getAffiliationStyles;
 
   if (loading) {
     return (

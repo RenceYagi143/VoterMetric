@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Voter, Precinct, Affiliation } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, MapPin, TrendingUp, History, Activity, BarChart3 } from 'lucide-react';
+import { Users, MapPin, TrendingUp, Activity, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface Props {
