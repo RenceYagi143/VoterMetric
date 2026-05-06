@@ -18,11 +18,12 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // TESTING OVERRIDE: Force clear state and start from scratch every refresh
   useEffect(() => {
-    localStorage.removeItem('hasSeenOnboarding');
-    // Force sign out to ensure the manual sign-in flow is triggered every time as requested
-    auth.signOut();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -36,8 +37,8 @@ export default function App() {
   useEffect(() => {
     if (view === View.SPLASH) {
       const timer = setTimeout(() => {
-        // ALWAYS go to onboarding after splash for testing
-        setView(View.ONBOARDING);
+        const hasSeen = localStorage.getItem('hasSeenOnboarding') === 'true';
+        setView(hasSeen ? View.AUTH : View.ONBOARDING);
       }, 2000);
       return () => clearTimeout(timer);
     }

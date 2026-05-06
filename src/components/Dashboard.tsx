@@ -9,7 +9,6 @@ import {
   Plus, 
   LogOut,
   ChevronDown,
-  LayoutGrid,
   List,
   Database
 } from 'lucide-react';
@@ -278,7 +277,6 @@ export default function Dashboard() {
                               btn.innerText = "INITIALIZING...";
                               btn.disabled = true;
                               try {
-                                const { resetAndSeedDatabase } = await import('../lib/seed');
                                 await resetAndSeedDatabase();
                                 alert("Database successfully populated with real Iligan Cluster I data!");
                                 window.location.reload();
