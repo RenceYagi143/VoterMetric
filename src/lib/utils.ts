@@ -1,6 +1,6 @@
-import { Affiliation } from '../types';
+import type { Affiliation } from '../types';
 
-export const getAffiliationStyles = (affiliation: string) => {
+export const getAffiliationStyles = (affiliation: Affiliation) => {
   switch (affiliation) {
     case 'Red': return 'bg-red-600 text-white border-red-700';
     case 'Blue': return 'bg-blue-600 text-white border-blue-700';

@@ -190,7 +190,7 @@ const RAW_DATA = [
   }
 ];
 
-const COLORS = ['Red', 'Blue', 'Green', 'Yellow'];
+
 
 export async function resetAndSeedDatabase() {
   try {

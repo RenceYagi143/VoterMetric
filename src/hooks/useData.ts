@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Voter, OperationType } from '../types';
+import { Voter, Precinct, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/error-handler';
 
 export function useVoters(filters: { precinctId?: string, limit?: number }) {
@@ -20,7 +20,7 @@ export function useVoters(filters: { precinctId?: string, limit?: number }) {
       setVoters(data);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'voters');
+      handleFirestoreError(error, OperationType.LIST, 'voters', false);
       setLoading(false);
     });
 
@@ -31,16 +31,16 @@ export function useVoters(filters: { precinctId?: string, limit?: number }) {
 }
 
 export function usePrecincts() {
-  const [precincts, setPrecincts] = useState<any[]>([]);
+  const [precincts, setPrecincts] = useState<Precinct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'precincts'), orderBy('name', 'asc'));
+    const q = query(collection(db, 'precincts'), orderBy('name', 'asc'), limit(250));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPrecincts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setPrecincts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Precinct)));
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'precincts');
+      handleFirestoreError(error, OperationType.LIST, 'precincts', false);
       setLoading(false);
     });
     return () => unsubscribe();
