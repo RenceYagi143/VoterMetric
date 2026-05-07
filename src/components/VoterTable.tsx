@@ -11,11 +11,14 @@ interface Props {
   masterView?: boolean;
   onEdit?: (voter: Voter) => void;
   onDelete?: (voterId: string) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
 type SortKey = keyof Voter;
 
-export default function VoterTable({ voters, loading, precincts, masterView, onEdit, onDelete }: Props) {
+export default function VoterTable({ voters, loading, precincts, masterView, onEdit, onDelete, fetchNextPage, hasNextPage, isFetchingNextPage }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('fullName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [groupBy, setGroupBy] = useState<'none' | 'precinct' | 'affiliation' | 'cluster' | 'barangay'>('none');
@@ -200,6 +203,18 @@ export default function VoterTable({ voters, loading, precincts, masterView, onE
             <div className="flex flex-col items-center justify-center py-32 text-gov-navy/10">
               <Users size={64} strokeWidth={1} />
               <p className="mt-4 font-serif font-bold text-xl text-gov-navy/40 italic">No Registry Entries Found</p>
+            </div>
+          )}
+
+          {hasNextPage && (
+            <div className="flex justify-center p-6 bg-white border-t border-gov-navy/5">
+              <button
+                onClick={() => fetchNextPage?.()}
+                disabled={isFetchingNextPage}
+                className="rounded-lg bg-gov-navy/5 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-gov-navy hover:bg-gov-navy hover:text-white transition-all disabled:opacity-50"
+              >
+                {isFetchingNextPage ? 'Loading more records...' : 'Load More Records'}
+              </button>
             </div>
           )}
         </div>
