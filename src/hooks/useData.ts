@@ -1,50 +1,57 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { Voter, Precinct, OperationType } from '../types';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { VoterService } from '../services/voter.service';
+import { PrecinctService } from '../services/precinct.service';
 import { handleFirestoreError } from '../lib/error-handler';
+import { OperationType } from '../types';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export function useVoters(filters: { precinctId?: string, limit?: number }) {
-  const [voters, setVoters] = useState<Voter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data, 
+    isLoading: loading, 
+    error, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteQuery({
+    queryKey: ['voters', filters],
+    queryFn: ({ pageParam }) => VoterService.getVoters(filters, pageParam as QueryDocumentSnapshot | null),
+    initialPageParam: null as QueryDocumentSnapshot | null,
+    getNextPageParam: (lastPage) => lastPage.lastVisible || undefined,
+  });
 
-  useEffect(() => {
-    let q = query(collection(db, 'voters'), orderBy('fullName', 'asc'), limit(filters.limit || 250));
+  if (error) {
+    handleFirestoreError(error as any, OperationType.LIST, 'voters', false);
+  }
 
-    if (filters.precinctId && filters.precinctId !== 'all') {
-      q = query(collection(db, 'voters'), where('precinctId', '==', filters.precinctId), orderBy('fullName', 'asc'), limit(filters.limit || 250));
-    }
+  const voters = data?.pages.flatMap(page => page.voters) || [];
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Voter));
-      setVoters(data);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'voters', false);
-      setLoading(false);
-    });
+  return { voters, loading, fetchNextPage, hasNextPage, isFetchingNextPage };
+}
 
-    return () => unsubscribe();
-  }, [filters.precinctId]);
+export function useVoterSearch(searchQuery: string, category: string) {
+  const { data: searchResults = [], isLoading: searchLoading, error } = useQuery({
+    queryKey: ['voters', 'search', searchQuery, category],
+    queryFn: () => VoterService.searchVoters(searchQuery, category),
+    enabled: !!searchQuery,
+  });
 
-  return { voters, loading };
+  if (error) {
+    handleFirestoreError(error as any, OperationType.LIST, 'voters', false);
+  }
+
+  return { searchResults, searchLoading };
 }
 
 export function usePrecincts() {
-  const [precincts, setPrecincts] = useState<Precinct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: precincts = [], isLoading: loading, error } = useQuery({
+    queryKey: ['precincts'],
+    queryFn: () => PrecinctService.getPrecincts(),
+  });
 
-  useEffect(() => {
-    const q = query(collection(db, 'precincts'), orderBy('name', 'asc'), limit(250));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPrecincts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Precinct)));
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'precincts', false);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+  if (error) {
+    handleFirestoreError(error, OperationType.LIST, 'precincts', false);
+  }
 
   return { precincts, loading };
 }

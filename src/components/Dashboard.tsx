@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, 
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import { logOut, auth, db as fireDb } from '../lib/firebase';
 import { addDoc, collection, serverTimestamp, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { useVoters, usePrecincts } from '../hooks/useData';
+import { useVoters, usePrecincts, useVoterSearch } from '../hooks/useData';
 import { resetAndSeedDatabase } from '../lib/seed';
 import VoterTable from './VoterTable';
 import PrecinctManager from './PrecinctManager';
@@ -19,7 +20,8 @@ import Analytics from './Analytics';
 import { Affiliation, Voter, Precinct } from '../types';
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'precincts' | 'all-info' | 'settings'>('dashboard');
+  const location = useLocation();
+  const currentPath = location.pathname;
   const [precinctFilter, setPrecinctFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('All');
@@ -27,28 +29,15 @@ export default function Dashboard() {
   const [editingVoter, setEditingVoter] = useState<Voter | null>(null);
   const [seeding, setSeeding] = useState(false);
 
-  const { voters, loading: votersLoading } = useVoters({ 
-    precinctId: precinctFilter
+  const { voters, loading: votersLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useVoters({ 
+    precinctId: precinctFilter,
+    limit: 50
   });
 
-  const filteredVoters = useMemo(() => {
-    const searchLower = searchQuery.toLowerCase();
-    if (!searchLower) return voters;
-    
-    return voters.filter(v => {
-      const nameMatch = v.fullName.toLowerCase().includes(searchLower);
-      const addressMatch = v.address.toLowerCase().includes(searchLower);
-      const precinctMatch = v.precinctName.toLowerCase().includes(searchLower);
-      const affiliationMatch = v.affiliationColor.toLowerCase().includes(searchLower);
+  const { searchResults, searchLoading } = useVoterSearch(searchQuery, searchCategory);
 
-      if (searchCategory === 'Name') return nameMatch;
-      if (searchCategory === 'Address') return addressMatch;
-      if (searchCategory === 'Precinct') return precinctMatch;
-      if (searchCategory === 'Political Affiliation') return affiliationMatch;
-      
-      return nameMatch || addressMatch || precinctMatch || affiliationMatch;
-    });
-  }, [voters, searchQuery, searchCategory]);
+  const displayVoters = searchQuery ? searchResults : voters;
+  const isCurrentlyLoading = searchQuery ? searchLoading : votersLoading;
   
   const { precincts } = usePrecincts();
 
@@ -83,20 +72,23 @@ export default function Dashboard() {
 
         <nav className="flex-1 mt-6 space-y-1 px-3">
           {[
-            { id: 'dashboard', label: 'Dashboard / Insights', icon: BarChart3 },
-            { id: 'precincts', label: 'Precinct Registry', icon: MapPin },
-            { id: 'all-info', label: 'All Information', icon: List },
-            { id: 'settings', label: 'Settings / Profile', icon: Database },
-          ].map((item) => (
-            <button 
-              key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
-              className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold tracking-tight transition-all ${activeTab === item.id ? 'bg-gov-navy text-white shadow-md' : 'text-gov-slate/60 hover:bg-gov-bg hover:text-gov-navy'}`}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
+            { path: '/', label: 'Dashboard / Insights', icon: BarChart3 },
+            { path: '/precincts', label: 'Precinct Registry', icon: MapPin },
+            { path: '/all-info', label: 'All Information', icon: List },
+            { path: '/settings', label: 'Settings / Profile', icon: Database },
+          ].map((item) => {
+            const isActive = currentPath === item.path;
+            return (
+              <Link 
+                key={item.path}
+                to={item.path}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold tracking-tight transition-all ${isActive ? 'bg-gov-navy text-white shadow-md' : 'text-gov-slate/60 hover:bg-gov-bg hover:text-gov-navy'}`}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-gov-navy/5">
@@ -167,43 +159,40 @@ export default function Dashboard() {
         <div className="flex-1 overflow-y-auto p-8 relative">
           <AnimatePresence mode="wait">
             {(!editingVoter && !showAddModal) && (
-              <>
-                {activeTab === 'dashboard' && (
+              <Routes location={location} key={location.pathname}>
+                <Route path="/" element={
                   <motion.div
-                    key="dashboard"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <Analytics voters={filteredVoters} precincts={precincts} />
+                    <Analytics voters={displayVoters} precincts={precincts} />
                   </motion.div>
-                )}
+                } />
 
-                {activeTab === 'precincts' && (
+                <Route path="/precincts" element={
                   <motion.div
-                    key="precincts"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
                     <PrecinctManager 
                       precincts={precincts} 
-                      voters={filteredVoters} 
+                      voters={displayVoters} 
                       onEditVoter={(voter) => setEditingVoter(voter)}
                     />
                   </motion.div>
-                )}
+                } />
 
-                {activeTab === 'all-info' && (
+                <Route path="/all-info" element={
                   <motion.div
-                    key="all-info"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
                     <VoterTable 
-                      voters={filteredVoters} 
-                      loading={votersLoading} 
+                      voters={displayVoters} 
+                      loading={isCurrentlyLoading} 
                       precincts={precincts}
                       masterView
                       onEdit={(voter) => setEditingVoter(voter)}
@@ -214,13 +203,15 @@ export default function Dashboard() {
                           console.error(err);
                         }
                       }}
+                      fetchNextPage={fetchNextPage}
+                      hasNextPage={hasNextPage}
+                      isFetchingNextPage={isFetchingNextPage}
                     />
                   </motion.div>
-                )}
+                } />
 
-                {activeTab === 'settings' && (
+                <Route path="/settings" element={
                   <motion.div
-                    key="settings"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -287,8 +278,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </motion.div>
-                )}
-              </>
+                } />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
             )}
           </AnimatePresence>
         </div>
