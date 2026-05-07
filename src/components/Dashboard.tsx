@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Users, 
   MapPin, 
   BarChart3, 
   Search, 
-  Filter, 
   Plus, 
   LogOut,
-  ChevronDown,
   List,
   Database
 } from 'lucide-react';
@@ -19,7 +16,7 @@ import { resetAndSeedDatabase } from '../lib/seed';
 import VoterTable from './VoterTable';
 import PrecinctManager from './PrecinctManager';
 import Analytics from './Analytics';
-import { Affiliation, Voter } from '../types';
+import { Affiliation, Voter, Precinct } from '../types';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'precincts' | 'all-info' | 'settings'>('dashboard');
@@ -118,7 +115,7 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-xs font-bold text-gov-navy">{auth.currentUser?.email}</p>
-              <p className="text-[9px] font-mono uppercase text-gov-gold">Verified Clerk</p>
+              <p className="text-[9px] font-mono uppercase text-gov-gold">{(auth.currentUser as any)?.reloadUserInfo?.customAttributes ? JSON.parse((auth.currentUser as any).reloadUserInfo.customAttributes).role || 'Clerk' : 'Clerk'}</p>
             </div>
             <button onClick={() => logOut()} className="text-gov-red hover:opacity-70 transition-opacity">
               <LogOut size={16} />
@@ -150,11 +147,6 @@ export default function Dashboard() {
                 placeholder={`Search the national registry by ${searchCategory.toLowerCase()}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    // Logic already handled by useVoters reacting toQuery
-                  }
-                }}
                 className="w-full bg-transparent py-3 pl-10 pr-4 text-sm font-medium outline-none text-gov-navy placeholder:text-gov-navy/30"
               />
             </div>

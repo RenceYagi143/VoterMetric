@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Voter, Affiliation } from '../types';
+import { useState, useMemo, useEffect } from 'react';
+import { Voter, Affiliation, Precinct } from '../types';
 import { ChevronUp, ChevronDown, MoreHorizontal, Phone, Home, Users, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getAffiliationStyles } from '../lib/utils';
@@ -7,7 +7,7 @@ import { getAffiliationStyles } from '../lib/utils';
 interface Props {
   voters: Voter[];
   loading: boolean;
-  precincts: any[];
+  precincts: Precinct[];
   masterView?: boolean;
   onEdit?: (voter: Voter) => void;
   onDelete?: (voterId: string) => void;
@@ -83,6 +83,7 @@ export default function VoterTable({ voters, loading, precincts, masterView, onE
     link.setAttribute("download", `voter_registry_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const getBadgeColor = getAffiliationStyles;
@@ -217,6 +218,13 @@ interface VoterRowProps {
 
 function VoterRow({ voter, getBadgeColor, onEdit, onDelete }: VoterRowProps) {
   const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => {
+    if (!showOptions) return;
+    const close = () => setShowOptions(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [showOptions]);
 
   return (
     <motion.div 

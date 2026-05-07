@@ -27,14 +27,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (view === View.SPLASH) {
       const timer = setTimeout(() => {
         const hasSeen = localStorage.getItem('hasSeenOnboarding') === 'true';
@@ -46,7 +38,6 @@ export default function App() {
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
-    // Only transition to Auth/Dashboard after onboarding
     setView(View.AUTH);
   };
 
@@ -55,6 +46,7 @@ export default function App() {
   };
 
   if (view === View.SPLASH) return <SplashScreen />;
+  if (loading) return <SplashScreen />;
   if (view === View.ONBOARDING) return <Onboarding onComplete={handleOnboardingComplete} />;
   
   if (!user || view === View.AUTH) {

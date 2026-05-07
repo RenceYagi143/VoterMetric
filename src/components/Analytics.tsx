@@ -45,8 +45,8 @@ export default function Analytics({ voters, precincts }: Props) {
         {[
           { label: 'Total Registered', value: voters.length, icon: Users, color: 'bg-gov-navy' },
           { label: 'Operational Precincts', value: precincts.length, icon: MapPin, color: 'bg-gov-gold text-gov-navy' },
-          { label: 'Active Clusters', value: Array.from(new Set(precincts.map(p => p.cluster))).length, icon: TrendingUp, color: 'bg-white border border-gov-navy/10 text-gov-navy' },
-          { label: 'Active Barangays', value: Array.from(new Set(precincts.map(p => p.barangay))).length, icon: Activity, color: 'bg-gov-red' }
+          { label: 'Active Clusters', value: clusters.length, icon: TrendingUp, color: 'bg-white border border-gov-navy/10 text-gov-navy' },
+          { label: 'Active Barangays', value: barangays.length, icon: Activity, color: 'bg-gov-red' }
         ].map((stat, i) => (
           <motion.div 
             key={i}
